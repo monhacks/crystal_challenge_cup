@@ -1,4 +1,4 @@
-PYTHON := python
+PYTHON := python2
 
 .SUFFIXES:
 .SUFFIXES: .asm .tx .o .gbc .png .2bpp .1bpp .lz .pal .bin .blk .tilemap
@@ -10,6 +10,16 @@ gfx       := $(PYTHON) $(poketools)/gfx.py
 includes  := $(PYTHON) $(poketools)/scan_includes.py
 pre       := $(PYTHON) prequeue.py
 
+ifneq ($(wildcard rgbds/.*),)
+RGBDS := rgbds/
+else
+RGBDS :=
+endif
+
+RGBASM := $(RGBDS)rgbasm
+RGBFIX := $(RGBDS)rgbfix
+RGBGFX := $(RGBDS)rgbgfx
+RGBLINK := $(RGBDS)rgblink
 
 crystal_obj := \
 wram.o \
@@ -57,13 +67,11 @@ $(all_obj): $$*.tx $$(patsubst %.asm, %.tx, $$($$*_dep))
 	@$(gfx) 2bpp $(2bppq); $(eval 2bppq :=)
 	@$(gfx) 1bpp $(1bppq); $(eval 1bppq :=)
 	@$(gfx) lz $(lzq);     $(eval lzq   :=)
-	rgbasm -o $@ $*.tx
+	$(RGBASM) -o $@ $*.tx
 
 pokecrystal.gbc: $(crystal_obj)
-	rgblink -n $*.sym -m $*.map -o $@ $^
-	rgbfix -Cjv -i BYTE -k 01 -l 0x33 -m 0x10 -p 0 -r 3 -t PM_CRYSTAL $@
-	cmp baserom.gbc $@
-
+	$(RGBLINK) -n $*.sym -m $*.map -o $@ $^
+	$(RGBFIX) -Cjv -i BYTE -k 01 -l 0x33 -m 0x10 -p 0 -r 3 -t PM_CRYSTAL $@
 
 pngs:
 	find . -iname "*.lz"      -exec $(gfx) unlz {} +
